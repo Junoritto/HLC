@@ -5,8 +5,9 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 
-from hlc.config import KST, STATUS_DONE, STATUS_PLAN
+from hlc.config import KST
 from hlc.notion import Notion, load_cards
+from hlc.sync import reconcile_targets
 
 
 def main() -> None:
@@ -15,12 +16,10 @@ def main() -> None:
 
     today = datetime.now(tz=KST).date()
     cards = load_cards(client, {today})
-    flipped = 0
-    for c in cards:
-        if c.cday == today and not c.is_stub and c.status == STATUS_PLAN and c.complete:
-            client.set_status(c.page_id, STATUS_DONE)
-            flipped += 1
-    print(f"[sync] {today} 완료: {flipped}건 인증완료 반영")
+    targets = reconcile_targets(cards, today)
+    for page_id, status in targets:
+        client.set_status(page_id, status)
+    print(f"[sync] {today} 완료: {len(targets)}건 상태 교정 (체크박스 기준)")
 
 
 if __name__ == "__main__":
