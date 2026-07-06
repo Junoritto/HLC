@@ -33,6 +33,19 @@ class Penalty:
 
 
 @dataclass
+class MemberDetail:
+    name: str
+    today_submitted: bool
+    plan_items: list[tuple[str, bool]]     # 오늘 계획 (텍스트, 체크)
+    yday_judged: bool                       # 어제가 가동 이후라 판정됨
+    yday_ok: bool
+    yday_note: str
+    yday_items: list[tuple[str, bool]]     # 어제 이행 (텍스트, 체크)
+    photo_urls: list[str]                   # 어제 인증 사진
+    penalty_won: int
+
+
+@dataclass
 class Report:
     run_day: date
     yesterday: date
@@ -40,6 +53,17 @@ class Report:
     today_status: list[TodayStatus]
     penalties: list[Penalty]
     pot: int
+    members_detail: list[MemberDetail]
+
+
+def _pick_latest(cards: list[Card]) -> Card | None:
+    return max(cards, key=lambda c: c.created_utc) if cards else None
+
+
+def _pick_best_yday(cards: list[Card]) -> Card | None:
+    """완료한 카드 우선, 없으면 최신."""
+    done = [c for c in cards if c.complete]
+    return _pick_latest(done or cards)
 
 
 @dataclass
@@ -96,26 +120,32 @@ def build_plan(cards: list[Card], run_day: date, members: dict[str, str]) -> Jud
 def _report(by_member, members, run_day, yesterday, missing) -> Report:
     pre_go_live = yesterday < START_DATE
     yday_results, today_status, penalties, pot = [], [], [], 0
+    details = []
 
     for mid, name in members.items():
         mine = by_member[mid]
 
         # 어제 결과
+        yday_ok, yday_note = False, ""
         if not pre_go_live:
             yc = [c for c in mine if c.cday == yesterday]
             if any(c.complete for c in yc if not c.is_stub) or any(c.status == STATUS_DONE for c in yc):
-                yday_results.append(YdayResult(name, True, ""))
+                yday_ok, yday_note = True, ""
             elif any(c.is_stub for c in yc):
-                yday_results.append(YdayResult(name, False, "계획 미제출"))
+                yday_note = "계획 미제출"
             elif yc:
-                yday_results.append(YdayResult(name, False, "인증 미이행"))
+                yday_note = "인증 미이행"
             else:
-                yday_results.append(YdayResult(name, False, "미제출"))
+                yday_note = "미제출"
+            yday_results.append(YdayResult(name, yday_ok, yday_note))
 
         # 오늘 제출 여부
-        today_status.append(
-            TodayStatus(name, any(c.cday == run_day and not c.is_stub for c in mine))
-        )
+        submitted = any(c.cday == run_day and not c.is_stub for c in mine)
+        today_status.append(TodayStatus(name, submitted))
+
+        # 상세 카드(계획/이행/사진)
+        today_card = _pick_latest([c for c in mine if c.cday == run_day and not c.is_stub])
+        yday_card = _pick_best_yday([c for c in mine if c.cday == yesterday and not c.is_stub])
 
         # 벌금: (멤버 × 날짜) 실패 수.
         #  - START_DATE 이후: 증거 기반 판정(_is_fail_day)
@@ -136,4 +166,16 @@ def _report(by_member, members, run_day, yesterday, missing) -> Report:
         pot += won
         penalties.append(Penalty(name, fails, won))
 
-    return Report(run_day, yesterday, yday_results, today_status, penalties, pot)
+        details.append(MemberDetail(
+            name=name,
+            today_submitted=submitted,
+            plan_items=today_card.items if today_card else [],
+            yday_judged=not pre_go_live,
+            yday_ok=yday_ok,
+            yday_note=yday_note,
+            yday_items=(yday_card.items if yday_card and not pre_go_live else []),
+            photo_urls=(yday_card.photo_urls if yday_card and not pre_go_live else []),
+            penalty_won=won,
+        ))
+
+    return Report(run_day, yesterday, yday_results, today_status, penalties, pot, details)

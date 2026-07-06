@@ -1,7 +1,7 @@
 """Notion 원본 페이지/블록 -> 판정에 쓰는 Card 구조로 정규화."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 
 from . import core
@@ -16,7 +16,9 @@ class Card:
     complete: bool             # 할 일 체크리스트 전부 체크됨
     created_utc: datetime
     last_edited_utc: datetime
-    is_stub: bool = False      # 스크립트가 만든 미제출 실패 카드
+    is_stub: bool = False                       # 스크립트가 만든 미제출 실패 카드
+    items: list[tuple[str, bool]] = field(default_factory=list)  # 할 일 (텍스트, 체크여부)
+    photo_urls: list[str] = field(default_factory=list)          # 인증 사진 URL
 
     @classmethod
     def from_notion(cls, page: dict, blocks: list[dict]) -> "Card":
@@ -27,6 +29,9 @@ class Card:
         created = datetime.fromisoformat(page["created_time"].replace("Z", "+00:00"))
         edited = datetime.fromisoformat(page["last_edited_time"].replace("Z", "+00:00"))
         title = _title(props)
+        files = props.get("인증 사진", {}).get("files", [])
+        photo_urls = [u for u in
+                      ((f.get("file") or f.get("external") or {}).get("url", "") for f in files) if u]
         return cls(
             page_id=page["id"],
             assignee_id=assignee,
@@ -36,6 +41,8 @@ class Card:
             created_utc=created,
             last_edited_utc=edited,
             is_stub=title.startswith("[HLC] 미제출"),
+            items=core.task_items(blocks),
+            photo_urls=photo_urls,
         )
 
 

@@ -34,8 +34,8 @@ def main() -> None:
         if not c.is_stub and c.cday in {today, yesterday}:
             client.set_date(c.page_id, c.cday)
 
-    # 4) 리포트 발송
-    discord.send(discord.format_report(plan.report))
+    # 4) 리포트 발송 (임베드 + 인증사진 첨부)
+    discord.send_report(plan.report)
     print(f"[judge] {today} 완료: finalize={len(plan.finalize)} stub={len(plan.missing)}")
 
 

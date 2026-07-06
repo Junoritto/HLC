@@ -23,14 +23,14 @@ def _block_text(block: dict) -> str:
     return "".join(r.get("plain_text", "") for r in rich).strip()
 
 
-def task_todos(blocks: list[dict]) -> list[bool]:
-    """'할 일 체크리스트' 헤딩 아래의 to_do 체크 상태 목록.
+def task_items(blocks: list[dict]) -> list[tuple[str, bool]]:
+    """'할 일 체크리스트' 헤딩 아래의 (할 일 텍스트, 체크여부) 목록.
 
     - 다음 heading을 만나면 섹션 종료.
     - 텍스트가 빈 to_do(템플릿 빈칸)는 제외.
     - '✅ 인증 체크' 등 다른 섹션의 체크박스는 포함하지 않는다.
     """
-    result: list[bool] = []
+    result: list[tuple[str, bool]] = []
     in_section = False
     for b in blocks:
         btype = b.get("type", "")
@@ -38,9 +38,14 @@ def task_todos(blocks: list[dict]) -> list[bool]:
             in_section = TASK_HEADING in _block_text(b)
             continue
         if in_section and btype == "to_do":
-            if _block_text(b):  # 빈칸 무시
-                result.append(bool(b["to_do"].get("checked")))
+            txt = _block_text(b)
+            if txt:  # 빈칸 무시
+                result.append((txt, bool(b["to_do"].get("checked"))))
     return result
+
+
+def task_todos(blocks: list[dict]) -> list[bool]:
+    return [checked for _, checked in task_items(blocks)]
 
 
 def is_card_complete(blocks: list[dict]) -> bool:
