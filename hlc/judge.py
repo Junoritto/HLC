@@ -117,11 +117,19 @@ def _report(by_member, members, run_day, yesterday, missing) -> Report:
             TodayStatus(name, any(c.cday == run_day and not c.is_stub for c in mine))
         )
 
-        # 벌금: (멤버 × 날짜) 실패 수, START_DATE 이후만
+        # 벌금: (멤버 × 날짜) 실패 수.
+        #  - START_DATE 이후: 증거 기반 판정(_is_fail_day)
+        #  - 과거: 소급 판정하지 않고, 사람이 이미 매긴 '실패'만 인정 (옵션 A)
         days: dict[date, list[Card]] = {}
         for c in mine:
             days.setdefault(c.cday, []).append(c)
-        fails = sum(1 for d, g in days.items() if d >= START_DATE and _is_fail_day(g, d, yesterday))
+        fails = 0
+        for d, g in days.items():
+            if d >= START_DATE:
+                if _is_fail_day(g, d, yesterday):
+                    fails += 1
+            elif any(c.status == STATUS_FAIL for c in g) and not any(c.status == STATUS_DONE for c in g):
+                fails += 1
         if mid in missing:                 # 오늘 미제출(신규 stub 예정)
             fails += 1
         won = fails * PENALTY

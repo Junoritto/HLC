@@ -103,6 +103,32 @@ def test_pre_go_live_day_not_finalized_or_penalized():
     assert plan.report.pot == 0                # 벌금 없음
 
 
+def test_past_manual_fail_counts_in_penalty():
+    # START_DATE 이전이라도 사람이 매긴 '실패'는 누적 벌금에 반영 (옵션 A)
+    cards = [
+        card("A", date(2026, 7, 3), complete=False, status=STATUS_FAIL),  # 과거 수동 실패
+        card("A", D, complete=False),   # 오늘 제출(미제출 벌금 격리)
+        card("B", D, complete=False),
+        card("C", D, complete=False),
+    ]
+    plan = judge.build_plan(cards, D, MEMBERS)
+    pen = {p.name: p.won for p in plan.report.penalties}
+    assert pen["준호"] == 3000
+    assert pen["종서"] == 0
+
+
+def test_past_done_not_counted():
+    cards = [
+        card("A", date(2026, 7, 3), complete=False, status=STATUS_DONE),  # 과거 인증완료
+        card("A", D, complete=False),
+        card("B", D, complete=False),
+        card("C", D, complete=False),
+    ]
+    plan = judge.build_plan(cards, D, MEMBERS)
+    pen = {p.name: p.won for p in plan.report.penalties}
+    assert pen["준호"] == 0
+
+
 def test_report_today_submission_status():
     plan = judge.build_plan([card("A", D, complete=False)], D, MEMBERS)
     today = {t.name: t.submitted for t in plan.report.today_status}
