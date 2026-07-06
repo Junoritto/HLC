@@ -1,0 +1,46 @@
+"""Notion 원본 페이지/블록 -> 판정에 쓰는 Card 구조로 정규화."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date, datetime
+
+from . import core
+
+
+@dataclass(frozen=True)
+class Card:
+    page_id: str
+    assignee_id: str | None
+    status: str
+    cday: date                 # challenge_day (createdTime 기준)
+    complete: bool             # 할 일 체크리스트 전부 체크됨
+    created_utc: datetime
+    last_edited_utc: datetime
+    is_stub: bool = False      # 스크립트가 만든 미제출 실패 카드
+
+    @classmethod
+    def from_notion(cls, page: dict, blocks: list[dict]) -> "Card":
+        props = page["properties"]
+        people = props.get("담당자", {}).get("people", [])
+        assignee = people[0]["id"] if people else None
+        status_obj = props.get("진행 상태", {}).get("status") or {}
+        created = datetime.fromisoformat(page["created_time"].replace("Z", "+00:00"))
+        edited = datetime.fromisoformat(page["last_edited_time"].replace("Z", "+00:00"))
+        title = _title(props)
+        return cls(
+            page_id=page["id"],
+            assignee_id=assignee,
+            status=status_obj.get("name", ""),
+            cday=core.challenge_day(created),
+            complete=core.is_card_complete(blocks),
+            created_utc=created,
+            last_edited_utc=edited,
+            is_stub=title.startswith("[HLC] 미제출"),
+        )
+
+
+def _title(props: dict) -> str:
+    for p in props.values():
+        if p.get("type") == "title":
+            return "".join(t.get("plain_text", "") for t in p.get("title", []))
+    return ""
