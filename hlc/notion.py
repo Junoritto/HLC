@@ -7,7 +7,7 @@ from datetime import date, datetime
 import requests
 
 from . import core
-from .config import DATABASE_ID, STATUS_FAIL
+from .config import DATABASE_ID, STATUS_FAIL, STATUS_PROP
 from .models import Card
 
 API = "https://api.notion.com/v1"
@@ -66,7 +66,7 @@ class Notion:
     # ---- 변경 ----
     def set_status(self, page_id: str, name: str) -> None:
         self._patch(f"/pages/{page_id}",
-                    {"properties": {"진행 상태": {"status": {"name": name}}}})
+                    {"properties": {STATUS_PROP: {"status": {"name": name}}}})
 
     def set_date(self, page_id: str, day: date) -> None:
         self._patch(f"/pages/{page_id}",
@@ -79,7 +79,7 @@ class Notion:
             "properties": {
                 "이름": {"title": [{"text": {"content": title}}]},
                 "담당자": {"people": [{"id": assignee_id}]},
-                "진행 상태": {"status": {"name": STATUS_FAIL}},
+                STATUS_PROP: {"status": {"name": STATUS_FAIL}},
                 "날짜": {"date": {"start": day.isoformat()}},
             },
         })

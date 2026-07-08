@@ -15,6 +15,9 @@ START_DATE = date(2026, 7, 6)
 # --- Notion ---
 DATABASE_ID = "386379967a7c804580c0ea318d5cad6c"  # HLC 인증 Board
 
+# status 속성 이름 (Notion에서 '🤖 판정'으로 명시 — 봇 소유 배지)
+STATUS_PROP = "🤖 판정"
+
 # 진행 상태 값 (Notion status 옵션 이름과 정확히 일치해야 함)
 STATUS_PLAN = "계획 완료"
 STATUS_DONE = "인증 완료"

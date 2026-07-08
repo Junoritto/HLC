@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 
 from . import core
+from .config import STATUS_PROP
 
 
 @dataclass(frozen=True)
@@ -25,7 +26,7 @@ class Card:
         props = page["properties"]
         people = props.get("담당자", {}).get("people", [])
         assignee = people[0]["id"] if people else None
-        status_obj = props.get("진행 상태", {}).get("status") or {}
+        status_obj = props.get(STATUS_PROP, {}).get("status") or {}
         created = datetime.fromisoformat(page["created_time"].replace("Z", "+00:00"))
         edited = datetime.fromisoformat(page["last_edited_time"].replace("Z", "+00:00"))
         title = _title(props)
