@@ -49,9 +49,10 @@ def test_pending_no_evidence_is_pending_no_penalty():
     assert all(st != STATUS_FAIL for _, st in plan.finalize)
 
 
-def test_pending_photo_is_ok():
-    plan = judge.build_plan([card("A", PEND, photos=["x"])] + _today_all(), D, MEMBERS)
-    assert _pending(plan)["준호"] == "ok"
+def test_pending_photo_alone_is_pending():
+    # 사진만 있고 체크 안 하면 미인증 (올체크가 유일한 성공 조건)
+    plan = judge.build_plan([card("A", PEND, complete=False, photos=["x"])] + _today_all(), D, MEMBERS)
+    assert _pending(plan)["준호"] == "pending"
 
 
 # ---------- 그저께(확정) ----------
@@ -63,8 +64,8 @@ def test_confirm_no_evidence_fails_and_penalized():
     assert _pen(plan)["준호"] == 3000
 
 
-def test_confirm_evidence_ok():
-    plan = judge.build_plan([card("A", CONF, photos=["x"])] + _today_all(), D, MEMBERS)
+def test_confirm_checkbox_ok():
+    plan = judge.build_plan([card("A", CONF, complete=True)] + _today_all(), D, MEMBERS)
     assert _confirm(plan)["준호"] == "ok"
     assert _pen(plan)["준호"] == 0
     assert (f"A-{CONF}-{STATUS_PLAN}", STATUS_DONE) in plan.finalize

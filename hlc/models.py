@@ -48,8 +48,11 @@ class Card:
 
 
 def succeeded(c: Card) -> bool:
-    """증거 기반 성공 = 인증 사진 있음 OR 할 일 체크리스트 올체크. (원래 '흔적 업로드' 규칙)"""
-    return (not c.is_stub) and (c.complete or bool(c.photo_urls))
+    """성공 = 할 일 체크리스트 올체크. (사진은 전시·증거용, 판정 기준 아님)
+
+    체크 깜빡 등 억울한 경우는 Discord ✅ 반응 정정으로 구제한다.
+    """
+    return (not c.is_stub) and c.complete
 
 
 def _title(props: dict) -> str:
