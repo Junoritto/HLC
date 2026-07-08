@@ -10,7 +10,7 @@ D = date(2026, 7, 10)         # run day (START_DATE=7/6 이후)
 YDAY = date(2026, 7, 9)
 
 
-def card(member, cday, complete, status=STATUS_PLAN, stub=False, pid=None):
+def card(member, cday, complete, status=STATUS_PLAN, stub=False, pid=None, photos=None):
     dt = datetime(2026, 1, 1, tzinfo=timezone.utc)
     return Card(
         page_id=pid or f"{member}-{cday}-{status}",
@@ -21,7 +21,31 @@ def card(member, cday, complete, status=STATUS_PLAN, stub=False, pid=None):
         created_utc=dt,
         last_edited_utc=dt,
         is_stub=stub,
+        photo_urls=photos or [],
     )
+
+
+def test_photo_without_checkboxes_is_success():
+    # 체크박스 미완료라도 인증 사진 있으면 성공 (증거 기반)
+    cards = [
+        card("A", YDAY, complete=False, photos=["http://x/p.png"]),
+        card("A", D, complete=False), card("B", D, complete=False), card("C", D, complete=False),
+    ]
+    plan = judge.build_plan(cards, D, MEMBERS)
+    yr = {y.name: y.ok for y in plan.report.yesterday_results}
+    assert yr["준호"] is True
+    assert {p.name: p.won for p in plan.report.penalties}["준호"] == 0
+    assert (f"A-{YDAY}-{STATUS_PLAN}", STATUS_DONE) in plan.finalize
+
+
+def test_no_photo_no_checkbox_is_fail():
+    cards = [
+        card("A", YDAY, complete=False),   # 사진X 체크X
+        card("A", D, complete=False), card("B", D, complete=False), card("C", D, complete=False),
+    ]
+    plan = judge.build_plan(cards, D, MEMBERS)
+    assert {y.name: y.ok for y in plan.report.yesterday_results}["준호"] is False
+    assert {p.name: p.won for p in plan.report.penalties}["준호"] == 3000
 
 
 def test_finalize_marks_complete_yesterday_card_done():

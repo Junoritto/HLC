@@ -8,21 +8,21 @@ from __future__ import annotations
 from datetime import date
 
 from .config import STATUS_DONE, STATUS_PLAN
-from .models import Card
+from .models import Card, succeeded
 
 
 def reconcile_targets(cards: list[Card], today: date) -> list[tuple[str, str]]:
     """오늘(진행 중) 카드의 목표 상태 목록 [(page_id, target)] — 변경 필요분만.
 
-    - 체크박스 전부 완료 → '인증 완료'
-    - 아직 미완료 → '계획 완료' (수동으로 바꾼 인증완료/실패를 되돌림)
+    - 증거 있음(사진 or 올체크) → '인증 완료'
+    - 아직 증거 없음 → '계획 완료' (수동으로 바꾼 인증완료/실패를 되돌림)
     - stub·오늘이 아닌 카드는 건드리지 않음 (지난 실패를 되살리지 않음)
     """
     targets: list[tuple[str, str]] = []
     for c in cards:
         if c.cday != today or c.is_stub:
             continue
-        want = STATUS_DONE if c.complete else STATUS_PLAN
+        want = STATUS_DONE if succeeded(c) else STATUS_PLAN
         if c.status != want:
             targets.append((c.page_id, want))
     return targets

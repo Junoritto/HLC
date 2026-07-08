@@ -47,6 +47,11 @@ class Card:
         )
 
 
+def succeeded(c: Card) -> bool:
+    """증거 기반 성공 = 인증 사진 있음 OR 할 일 체크리스트 올체크. (원래 '흔적 업로드' 규칙)"""
+    return (not c.is_stub) and (c.complete or bool(c.photo_urls))
+
+
 def _title(props: dict) -> str:
     for p in props.values():
         if p.get("type") == "title":
