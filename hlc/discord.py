@@ -152,7 +152,8 @@ def fetch_corrections(today, bot_token: str | None = None, channel_id: str | Non
 
     out = []
     for m in msgs.json():
-        if "HLC 리포트" not in (m.get("content") or ""):
+        # 봇은 남의 메시지 본문(content)을 못 읽음(특권 인텐트) → 웹훅 게시물로 식별
+        if not m.get("webhook_id"):
             continue
         if not any(rx["emoji"].get("name") == CORRECT_EMOJI for rx in m.get("reactions", [])):
             continue
