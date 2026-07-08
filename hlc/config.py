@@ -32,3 +32,17 @@ MEMBERS: dict[str, str] = {
     "88de5147-a7bd-4039-8a02-9aa89b8a22c5": "종서",
     "baf68de0-a010-4f34-8c70-8ffe51ca6564": "명근",
 }
+
+# --- Discord (Stage 2: ✅ 반응 정정) ---
+DISCORD_CHANNEL_ID = "1523511482686373912"
+
+# Discord user id -> Notion user id (누가 반응했는지 -> 누구 카드 정정인지)
+DISCORD_TO_NOTION: dict[str, str] = {
+    "412857384218787841": "2cf2c36d-a314-403f-a10f-a76af6a989ac",  # 준호
+    "398019920786489345": "88de5147-a7bd-4039-8a02-9aa89b8a22c5",  # 종서
+    "515045036723798044": "baf68de0-a010-4f34-8c70-8ffe51ca6564",  # 명근
+}
+
+# 정정 트리거 이모지 · 정정 가능 기간(일)
+CORRECT_EMOJI = "✅"
+CORRECTION_DAYS = 1  # 다음날까지

@@ -1,4 +1,4 @@
-"""매일 08:00 KST 실행: 어제 카드 마감 + 오늘 계획 미제출 처리 + Discord 리포트."""
+"""매일 08:00 KST: 어제=잠정(⏳) / 그저께=확정 판정 + 오늘 미제출 처리 + Discord 리포트."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -11,30 +11,30 @@ from hlc.notion import Notion, load_cards
 
 
 def main() -> None:
-    load_dotenv()  # 로컬 실행용(.env). GH Actions에선 env가 이미 주입됨 → no-op
+    load_dotenv()
     client = Notion()
 
-    today = datetime.now(tz=KST).date()          # challenge day D (08:00 KST 실행)
-    yesterday = today - timedelta(days=1)
-    cards = load_cards(client, {today, yesterday})
+    today = datetime.now(tz=KST).date()
+    focus = {today, today - timedelta(days=1), today - timedelta(days=2)}
+    cards = load_cards(client, focus)
     plan = judge.build_plan(cards, today, MEMBERS)
 
-    # 1) 어제 카드 마감 (인증완료/실패)
+    # 1) 상태 변경 (승격 인증완료 / 확정 실패)
     for page_id, status in plan.finalize:
         client.set_status(page_id, status)
 
-    # 2) 오늘 계획 미제출 -> 실패 stub (중복 생성 방지)
+    # 2) 오늘 계획 미제출 -> 실패 stub (중복 방지)
     existing_stub = {(c.assignee_id, c.cday) for c in cards if c.is_stub}
     for member_id in plan.missing:
         if (member_id, today) not in existing_stub:
             client.create_stub(member_id, today)
 
-    # 3) 날짜 필드 자동 기입 (기존 결함 보정) — 어제/오늘 실카드
+    # 3) 날짜 자동 기입 (focus 실카드)
     for c in cards:
-        if not c.is_stub and c.cday in {today, yesterday}:
+        if not c.is_stub and c.cday in focus:
             client.set_date(c.page_id, c.cday)
 
-    # 4) 리포트 발송 (임베드 + 인증사진 첨부)
+    # 4) 리포트 발송 (임베드 + 사진 + ⏳면 봇이 ✅ 미리 달기)
     discord.send_report(plan.report)
     print(f"[judge] {today} 완료: finalize={len(plan.finalize)} stub={len(plan.missing)}")
 
