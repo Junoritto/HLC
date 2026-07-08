@@ -74,16 +74,14 @@ class JudgePlan:
 
 
 def _is_fail_day(group: list[Card], day: date, yesterday: date) -> bool:
-    """(멤버, day) 하루가 최종적으로 '실패'인가."""
+    """(멤버, day) 하루가 최종적으로 '실패'인가. 성공 기준은 오직 체크박스(complete)."""
     if any(c.complete for c in group if not c.is_stub):
-        return False
-    if any(c.status == STATUS_DONE for c in group):
-        return False
+        return False              # 체크박스 전부 완료 = 성공
     if any(c.is_stub or c.status == STATUS_FAIL for c in group):
         return True
-    if day == yesterday:          # 오늘 마감되는데 미완료 -> 실패
+    if day == yesterday:          # 오늘 마감되는데 미완료 -> 실패 (상태가 인증완료여도)
         return True
-    return False                  # 오늘/미래의 진행중(계획 완료)은 아직 보류
+    return False                  # 오늘/미래의 진행중은 아직 보류
 
 
 def build_plan(cards: list[Card], run_day: date, members: dict[str, str]) -> JudgePlan:
@@ -129,7 +127,7 @@ def _report(by_member, members, run_day, yesterday, missing) -> Report:
         yday_ok, yday_note = False, ""
         if not pre_go_live:
             yc = [c for c in mine if c.cday == yesterday]
-            if any(c.complete for c in yc if not c.is_stub) or any(c.status == STATUS_DONE for c in yc):
+            if any(c.complete for c in yc if not c.is_stub):   # 성공 = 체크박스 완료 only
                 yday_ok, yday_note = True, ""
             elif any(c.is_stub for c in yc):
                 yday_note = "계획 미제출"

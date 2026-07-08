@@ -129,6 +129,20 @@ def test_past_done_not_counted():
     assert pen["준호"] == 0
 
 
+def test_manual_done_without_checkboxes_is_fail():
+    # 체크박스 미완료인데 status만 인증완료 -> 리포트·벌금·finalize 모두 '실패'
+    cards = [
+        card("A", YDAY, complete=False, status=STATUS_DONE),  # 가짜 인증완료
+        card("A", D, complete=False),   # 오늘 제출(미제출 벌금 격리)
+        card("B", D, complete=False), card("C", D, complete=False),
+    ]
+    plan = judge.build_plan(cards, D, MEMBERS)
+    yr = {y.name: (y.ok, y.note) for y in plan.report.yesterday_results}
+    assert yr["준호"] == (False, "인증 미이행")
+    assert {p.name: p.won for p in plan.report.penalties}["준호"] == 3000
+    assert (f"A-{YDAY}-{STATUS_DONE}", STATUS_FAIL) in plan.finalize
+
+
 def test_report_today_submission_status():
     plan = judge.build_plan([card("A", D, complete=False)], D, MEMBERS)
     today = {t.name: t.submitted for t in plan.report.today_status}
