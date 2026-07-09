@@ -93,6 +93,34 @@ def test_past_manual_fail_counted():
     assert _pen(plan)["준호"] == 3000
 
 
+def test_future_fail_status_not_counted():
+    # 미래 날짜 카드가 실패 status여도 벌금 집계 안 됨 (확정 전)
+    future = date(2026, 7, 12)
+    plan = judge.build_plan([card("A", future, status=STATUS_FAIL)] + _today_all(), D, MEMBERS)
+    assert _pen(plan)["준호"] == 0
+
+
+def test_pending_fail_status_not_counted():
+    # 어제(잠정) 카드가 실패 status여도 아직 집계 안 됨
+    plan = judge.build_plan([card("A", PEND, status=STATUS_FAIL)] + _today_all(), D, MEMBERS)
+    assert _pen(plan)["준호"] == 0
+
+
+def test_stub_and_missing_not_double_counted():
+    # A는 오늘 stub만(미제출) -> missing + stub 이중집계 방지 = 1건
+    stub = card("A", D, stub=True, status=STATUS_FAIL)
+    plan = judge.build_plan([stub, card("B", D), card("C", D)], D, MEMBERS)
+    assert "A" in plan.missing
+    assert _pen(plan)["준호"] == 3000
+
+
+def test_past_stub_counts_immediately():
+    # 지난 미제출 stub은 확정 구간 여부와 무관하게 즉시 실패로 유지
+    stub = card("A", CONF, stub=True, status=STATUS_FAIL)
+    plan = judge.build_plan([stub] + _today_all(), D, MEMBERS)
+    assert _pen(plan)["준호"] == 3000
+
+
 def test_today_submission_status():
     plan = judge.build_plan([card("A", D)], D, MEMBERS)
     ts = {t.name: t.submitted for t in plan.report.today_status}

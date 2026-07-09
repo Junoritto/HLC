@@ -33,15 +33,22 @@ class Card:
         files = props.get("인증 사진", {}).get("files", [])
         photo_urls = [u for u in
                       ((f.get("file") or f.get("external") or {}).get("url", "") for f in files) if u]
+        is_stub = title.startswith("[HLC] 미제출")
+        # 일반 카드는 createdTime 기준, 미제출 stub은 날짜 필드(실제 미제출일) 기준
+        cday = core.challenge_day(created)
+        if is_stub:
+            dp = (props.get("날짜", {}) or {}).get("date") or {}
+            if dp.get("start"):
+                cday = date.fromisoformat(dp["start"][:10])
         return cls(
             page_id=page["id"],
             assignee_id=assignee,
             status=status_obj.get("name", ""),
-            cday=core.challenge_day(created),
+            cday=cday,
             complete=core.is_card_complete(blocks),
             created_utc=created,
             last_edited_utc=edited,
-            is_stub=title.startswith("[HLC] 미제출"),
+            is_stub=is_stub,
             items=core.task_items(blocks),
             photo_urls=photo_urls,
         )

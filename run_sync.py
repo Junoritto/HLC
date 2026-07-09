@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from hlc import discord, judge
 from hlc.config import KST, MEMBERS, STATUS_DONE
+from hlc.models import succeeded
 from hlc.notion import Notion, load_cards
 from hlc.sync import reconcile_targets
 
@@ -27,9 +28,12 @@ def main() -> None:
     corrected = []
     try:
         for notion_id, cday in discord.fetch_corrections(today):
-            for c in cards:
-                if (c.assignee_id == notion_id and c.cday == cday
-                        and not c.is_stub and c.status != STATUS_DONE):
+            mday = [c for c in cards if c.assignee_id == notion_id
+                    and c.cday == cday and not c.is_stub]
+            if any(succeeded(c) or c.status == STATUS_DONE for c in mday):
+                continue    # 이미 성공/인증완료 -> 정정 불필요(빈 중복카드 정정 방지)
+            for c in mday:
+                if c.status != STATUS_DONE:
                     client.set_status(c.page_id, STATUS_DONE)
                     corrected.append((MEMBERS.get(notion_id, "?"), cday))
                     break

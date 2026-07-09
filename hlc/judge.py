@@ -77,16 +77,20 @@ def _pick_best(cards: list[Card]) -> Card | None:
 
 
 def _is_fail_day(group: list[Card], day: date, confirm_day: date) -> bool:
-    """(멤버, day)가 최종 '실패'인가. confirm_day 이후(어제/오늘)는 보류(pending)."""
+    """(멤버, day)가 확정 '실패'인가. 확정일(그저께) 이후는 벌금 보류.
+
+    어제(잠정)·오늘·미래 날짜는 status가 실패여도 집계하지 않는다
+    (오늘 계획 미제출은 tally의 missing에서 별도 처리).
+    """
     if any(succeeded(c) for c in group):
-        return False                        # 증거 = 성공
+        return False                        # 올체크 = 성공
     if any(c.status == STATUS_DONE for c in group):
         return False                        # 이미 인증완료(과거 확정/정정)
-    if any(c.is_stub or c.status == STATUS_FAIL for c in group):
-        return True
-    if day <= confirm_day:                  # 확정일 지났는데 증거 없음 -> 실패
-        return True
-    return False                            # 어제(잠정)/오늘 -> 보류
+    if any(c.is_stub for c in group):
+        return True                         # 계획 미제출 stub = 즉시 확정 (유예 없음)
+    if day > confirm_day:
+        return False                        # 어제(잠정)·오늘·미래 -> 확정 전, 보류
+    return True                             # 확정 구간인데 성공/인증 없음 -> 실패
 
 
 def build_plan(cards: list[Card], run_day: date, members: dict[str, str]) -> JudgePlan:
@@ -177,18 +181,18 @@ def _report(by_member, members, run_day, pending_day, confirm_day, missing) -> R
         days: dict[date, list[Card]] = {}
         for c in mine:
             days.setdefault(c.cday, []).append(c)
-        fails = 0
+        fail_days = set()                    # (멤버 × 날짜) 중복 제거
         for d, g in days.items():
             if d >= START_DATE:
                 if _is_fail_day(g, d, confirm_day):
-                    fails += 1
+                    fail_days.add(d)
             elif any(c.status == STATUS_FAIL for c in g) and not any(c.status == STATUS_DONE for c in g):
-                fails += 1
-        if mid in missing:
-            fails += 1
-        won = fails * PENALTY
+                fail_days.add(d)
+        if mid in missing:                   # 오늘 미제출 (stub은 아직 생성 전)
+            fail_days.add(run_day)
+        won = len(fail_days) * PENALTY
         pot += won
-        penalties.append(Penalty(name, fails, won))
+        penalties.append(Penalty(name, len(fail_days), won))
 
         details.append(MemberDetail(
             name=name,
