@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 
-from hlc import discord, judge
+from hlc import discord, judge, ledger
 from hlc.config import KST, MEMBERS
 from hlc.notion import Notion, load_cards
 
@@ -34,8 +34,9 @@ def main() -> None:
         if not c.is_stub and c.cday in focus:
             client.set_date(c.page_id, c.cday)
 
-    # 4) 리포트 발송 (임베드 + 사진 + ⏳면 봇이 ✅ 미리 달기)
-    discord.send_report(plan.report)
+    # 4) 리포트 발송 (임베드 + 사진 + 정산 현황 + ⏳면 봇이 ✅ 미리 달기)
+    settlement = ledger.build_settlement(plan.report.penalties, MEMBERS, ledger.read_ledger(client))
+    discord.send_report(plan.report, settlement=settlement)
     print(f"[judge] {today} 완료: finalize={len(plan.finalize)} stub={len(plan.missing)}")
 
 
