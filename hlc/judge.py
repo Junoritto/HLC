@@ -76,6 +76,14 @@ def _pick_best(cards: list[Card]) -> Card | None:
     return _pick_latest(good or cards)
 
 
+def _pick_planned(cards: list[Card]) -> Card | None:
+    """리포트 표시용 — 할 일 항목이 있는 카드 우선(가장 많은 항목), 그다음 최신.
+
+    하루에 빈 중복 카드를 여럿 올려도 실제 계획이 든 카드를 보여준다.
+    """
+    return max(cards, key=lambda c: (len(c.items), c.created_utc)) if cards else None
+
+
 def _is_fail_day(group: list[Card], day: date, confirm_day: date) -> bool:
     """(멤버, day)가 확정 '실패'인가. 확정일(그저께) 이후는 벌금 보류.
 
@@ -173,9 +181,11 @@ def _report(by_member, members, run_day, pending_day, confirm_day, missing) -> R
         submitted = any(c.cday == run_day and not c.is_stub for c in mine)
         today_status.append(TodayStatus(name, submitted))
 
-        # 상세(계획/어제 이행/사진)
-        today_card = _pick_latest([c for c in mine if c.cday == run_day and not c.is_stub])
-        yday_card = _pick_best([c for c in p_cards if not c.is_stub])
+        # 상세(계획/어제 이행/사진) — 빈 중복카드 말고 내용 있는 카드 우선
+        today_card = _pick_planned([c for c in mine if c.cday == run_day and not c.is_stub])
+        yday_ns = [c for c in p_cards if not c.is_stub]
+        yday_card = _pick_planned(yday_ns)
+        yday_photos = [u for c in yday_ns for u in c.photo_urls]
 
         # 벌금: 확정 실패만 (어제 잠정은 제외)
         days: dict[date, list[Card]] = {}
@@ -201,7 +211,7 @@ def _report(by_member, members, run_day, pending_day, confirm_day, missing) -> R
             yday_judged=not pre_pending,
             yday_state=p_res.state,
             yday_items=(yday_card.items if yday_card and not pre_pending else []),
-            photo_urls=(yday_card.photo_urls if yday_card and not pre_pending else []),
+            photo_urls=(yday_photos if not pre_pending else []),
             penalty_won=won,
         ))
 

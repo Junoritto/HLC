@@ -11,10 +11,20 @@ PEND = date(2026, 7, 9)        # 어제 (잠정)
 CONF = date(2026, 7, 8)        # 그저께 (확정)
 
 
-def card(member, cday, complete=False, status=STATUS_PLAN, stub=False, pid=None, photos=None):
+def card(member, cday, complete=False, status=STATUS_PLAN, stub=False, pid=None,
+         photos=None, items=None):
     dt = datetime(2026, 1, 1, tzinfo=timezone.utc)
     return Card(pid or f"{member}-{cday}-{status}", member, status, cday, complete,
-                dt, dt, is_stub=stub, photo_urls=photos or [])
+                dt, dt, is_stub=stub, photo_urls=photos or [], items=items or [])
+
+
+def test_plan_items_prefers_card_with_content():
+    # 하루에 빈 중복카드 + 실제 계획카드 -> 리포트는 실제 계획을 보여줌
+    empty = card("A", D, pid="empty")
+    real = card("A", D, pid="real", items=[("듀오링고", True), ("운동", False)])
+    plan = judge.build_plan([empty, real, card("B", D), card("C", D)], D, MEMBERS)
+    detail = {d.name: d for d in plan.report.members_detail}["준호"]
+    assert detail.plan_items == [("듀오링고", True), ("운동", False)]
 
 
 def _today_all():
