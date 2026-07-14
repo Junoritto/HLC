@@ -17,6 +17,22 @@ def challenge_day(created_utc: datetime) -> date:
     return kst.date() if kst <= deadline else kst.date() + timedelta(days=1)
 
 
+def resolve_cday(created_utc: datetime, date_field: date | None, is_stub: bool = False) -> date:
+    """카드의 challenge day 결정.
+
+    - 기본 = createdTime 기준 다음 마감일(= 최소 유효일).
+    - `날짜` 필드가 최소 유효일 이상이면 그 값 사용 → 여러 날 미리 계획 가능.
+    - 과거로 백데이팅(최소 유효일 미만)은 무시 → 8시 마감 우회 방지.
+    - stub(미제출 카드)은 `날짜`(실제 미제출일)를 그대로 사용.
+    """
+    base = challenge_day(created_utc)
+    if is_stub:
+        return date_field or base
+    if date_field and date_field >= base:
+        return date_field
+    return base
+
+
 def _block_text(block: dict) -> str:
     t = block.get("type", "")
     rich = block.get(t, {}).get("rich_text", [])

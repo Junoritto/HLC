@@ -34,12 +34,10 @@ class Card:
         photo_urls = [u for u in
                       ((f.get("file") or f.get("external") or {}).get("url", "") for f in files) if u]
         is_stub = title.startswith("[HLC] 미제출")
-        # 일반 카드는 createdTime 기준, 미제출 stub은 날짜 필드(실제 미제출일) 기준
-        cday = core.challenge_day(created)
-        if is_stub:
-            dp = (props.get("날짜", {}) or {}).get("date") or {}
-            if dp.get("start"):
-                cday = date.fromisoformat(dp["start"][:10])
+        dp = (props.get("날짜", {}) or {}).get("date") or {}
+        df = date.fromisoformat(dp["start"][:10]) if dp.get("start") else None
+        # 날짜 필드로 미래일 지정 가능(미리 계획), 백데이팅은 차단, stub은 날짜 그대로
+        cday = core.resolve_cday(created, df, is_stub)
         return cls(
             page_id=page["id"],
             assignee_id=assignee,

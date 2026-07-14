@@ -99,3 +99,29 @@ def test_is_complete_false_when_no_tasks():
 def test_penalty_won():
     assert core.penalty_won(0) == 0
     assert core.penalty_won(2) == 6000
+
+
+# ---------- resolve_cday: 여러 날 미리 계획 + 백데이팅 차단 ----------
+
+def _created(y, mo, d, h):  # KST 기준 시각을 UTC로
+    return datetime(y, mo, d, h, tzinfo=KST).astimezone(timezone.utc)
+
+
+def test_resolve_cday_no_date_uses_createdtime():
+    # 7/14 07:00 생성, 날짜 없음 -> 7/14
+    assert core.resolve_cday(_created(2026, 7, 14, 7), None) == date(2026, 7, 14)
+
+
+def test_resolve_cday_future_date_used():
+    # 7/14 생성인데 날짜=7/17 (미래) -> 7/17 (미리 계획 허용)
+    assert core.resolve_cday(_created(2026, 7, 14, 7), date(2026, 7, 17)) == date(2026, 7, 17)
+
+
+def test_resolve_cday_backdate_blocked():
+    # 7/14 10:00 생성(마감 후, 최소유효 7/15)인데 날짜=7/14 로 백데이팅 -> 무시, 7/15
+    assert core.resolve_cday(_created(2026, 7, 14, 10), date(2026, 7, 14)) == date(2026, 7, 15)
+
+
+def test_resolve_cday_stub_uses_date_field():
+    # stub은 날짜(실제 미제출일) 그대로 (백데이팅 가드 미적용)
+    assert core.resolve_cday(_created(2026, 7, 14, 10), date(2026, 7, 14), is_stub=True) == date(2026, 7, 14)
