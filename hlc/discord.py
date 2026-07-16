@@ -35,7 +35,7 @@ def _fmt_items(items: list[tuple[str, bool]]) -> str:
 
 # ---------- 리포트 임베드 구성 (순수) ----------
 
-def format_payload(report: Report, settlement=None):
+def format_payload(report: Report, settlement=None, new_penalties=None):
     """(content, embeds, photo_refs) 반환. photo_refs=[(embed_index, url, 장수)]."""
     r = report
     _P = {"ok": "✅", "pending": "⏳", "fail": "❌", "noplan": "⛔"}
@@ -57,9 +57,14 @@ def format_payload(report: Report, settlement=None):
         f"✅ {x.name}" if x.submitted else f"⛔ {x.name}(미제출)" for x in r.today_status
     )
     fields.append({"name": f"오늘({_md(r.run_day)}) 계획 제출", "value": today, "inline": False})
+    if new_penalties:
+        nl = "\n".join(f"❌ {name} {_md(d)} {reason} +{_won(3000)}"
+                       for name, d, reason in new_penalties)
+        fields.append({"name": "🆕 오늘 확정 (장부 기록됨)", "value": nl, "inline": False})
+
     pen = " · ".join(f"{p.name} {_won(p.won)}" for p in r.penalties)
     if settlement is not None:
-        fields.append({"name": "💰 발생 벌금(누적)", "value": pen, "inline": False})
+        fields.append({"name": "💰 발생 벌금(누적, 장부)", "value": pen, "inline": False})
         unpaid = " · ".join(f"{m.name} {_won(m.unpaid)}" for m in settlement.members)
         fields.append({"name": "🧾 정산 현황",
                        "value": f"미납  {unpaid}\n🏦 창고 잔액 **{_won(settlement.balance)}원** "
@@ -99,9 +104,9 @@ def format_payload(report: Report, settlement=None):
 # ---------- 발송 (웹훅) + ✅ 미리 달기 (봇) ----------
 
 def send_report(report: Report, webhook_url: str | None = None, bot_token: str | None = None,
-                settlement=None) -> None:
+                settlement=None, new_penalties=None) -> None:
     url = webhook_url or os.environ["DISCORD_WEBHOOK_URL"]
-    content, embeds, photo_refs = format_payload(report, settlement)
+    content, embeds, photo_refs = format_payload(report, settlement, new_penalties)
 
     files = []
     for i, (idx, src, _n) in enumerate(photo_refs):

@@ -10,7 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
-from .config import CORRECTION_DAYS, PENALTY, START_DATE, STATUS_DONE, STATUS_FAIL
+from .config import (CORRECTION_DAYS, PENALTY, REASON_NOPLAN, REASON_NOPROOF,
+                     START_DATE, STATUS_DONE, STATUS_FAIL)
 from .models import Card, succeeded
 
 
@@ -58,6 +59,9 @@ class Report:
     pot: int
     members_detail: list[MemberDetail]
     pending_prompt_names: list[str]         # ⏳ 미인증 → ✅ 정정 대상
+    # 벌금 장부 기록용 — 확정된 실패 (담당자 -> 날짜집합) 및 사유
+    fail_days: dict[str, set] = field(default_factory=dict)
+    fail_reasons: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -157,6 +161,8 @@ def _report(by_member, members, run_day, pending_day, confirm_day, missing) -> R
     pre_confirm = confirm_day < START_DATE
     pending_results, confirm_results, today_status = [], [], []
     penalties, pot, details, prompt = [], 0, [], []
+    all_fail_days: dict[str, set] = {}
+    all_reasons: dict = {}
 
     for mid, name in members.items():
         mine = by_member[mid]
@@ -200,6 +206,16 @@ def _report(by_member, members, run_day, pending_day, confirm_day, missing) -> R
                 fail_days.add(d)
         if mid in missing:                   # 오늘 미제출 (stub은 아직 생성 전)
             fail_days.add(run_day)
+
+        # 벌금 장부 기록용 — 확정 실패 날짜 + 사유
+        if fail_days:
+            all_fail_days[mid] = set(fail_days)
+            for d in fail_days:
+                g = days.get(d, [])
+                ns = [c for c in g if not c.is_stub]
+                all_reasons[(mid, d)] = (REASON_NOPLAN if (any(c.is_stub for c in g) or not ns)
+                                         else REASON_NOPROOF)
+
         won = len(fail_days) * PENALTY
         pot += won
         penalties.append(Penalty(name, len(fail_days), won))
@@ -216,4 +232,4 @@ def _report(by_member, members, run_day, pending_day, confirm_day, missing) -> R
         ))
 
     return Report(run_day, pending_day, confirm_day, pending_results, confirm_results,
-                  today_status, penalties, pot, details, prompt)
+                  today_status, penalties, pot, details, prompt, all_fail_days, all_reasons)

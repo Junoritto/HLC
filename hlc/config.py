@@ -14,7 +14,13 @@ START_DATE = date(2026, 7, 6)
 
 # --- Notion ---
 DATABASE_ID = "386379967a7c804580c0ea318d5cad6c"  # HLC 인증 Board
-LEDGER_DB_ID = "39837996-7a7c-8189-894b-c79ffd67bfa3"  # 정산 장부 (입금/지출)
+LEDGER_DB_ID = "39837996-7a7c-8189-894b-c79ffd67bfa3"   # 정산 장부 (입금/지출)
+PENALTY_DB_ID = "39f37996-7a7c-81d1-b34e-fe33827368aa"  # 벌금 장부 (발생 벌금 누적)
+
+# 벌금 장부 사유값
+REASON_NOPLAN = "계획 미제출"
+REASON_NOPROOF = "인증 미이행"
+REASON_ADJUST = "조정"
 
 # status 속성 이름 (Notion에서 '🤖 판정'으로 명시 — 봇 소유 배지)
 STATUS_PROP = "🤖 판정"
