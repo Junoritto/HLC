@@ -122,6 +122,14 @@ def test_resolve_cday_backdate_blocked():
     assert core.resolve_cday(_created(2026, 7, 14, 10), date(2026, 7, 14)) == date(2026, 7, 15)
 
 
+def test_resolve_cday_multi_day_preplan():
+    # 7/12 밤에 3장 미리 계획 (목표일 7/13·7/14·7/15) -> 각각 그날로
+    made = _created(2026, 7, 12, 22)          # 최소 유효일 = 7/13
+    assert core.resolve_cday(made, date(2026, 7, 13)) == date(2026, 7, 13)
+    assert core.resolve_cday(made, date(2026, 7, 14)) == date(2026, 7, 14)
+    assert core.resolve_cday(made, date(2026, 7, 15)) == date(2026, 7, 15)
+
+
 def test_resolve_cday_stub_uses_date_field():
     # stub은 날짜(실제 미제출일) 그대로 (백데이팅 가드 미적용)
     assert core.resolve_cday(_created(2026, 7, 14, 10), date(2026, 7, 14), is_stub=True) == date(2026, 7, 14)

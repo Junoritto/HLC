@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 
 from . import core
-from .config import STATUS_PROP
+from .config import DATE_PROP, STATUS_PROP
 
 
 @dataclass(frozen=True)
@@ -20,6 +20,7 @@ class Card:
     is_stub: bool = False                       # 스크립트가 만든 미제출 실패 카드
     items: list[tuple[str, bool]] = field(default_factory=list)  # 할 일 (텍스트, 체크여부)
     photo_urls: list[str] = field(default_factory=list)          # 인증 사진 URL
+    date_field: date | None = None              # 🎯 목표일 원본값 (None이면 미지정)
 
     @classmethod
     def from_notion(cls, page: dict, blocks: list[dict]) -> "Card":
@@ -34,9 +35,9 @@ class Card:
         photo_urls = [u for u in
                       ((f.get("file") or f.get("external") or {}).get("url", "") for f in files) if u]
         is_stub = title.startswith("[HLC] 미제출")
-        dp = (props.get("날짜", {}) or {}).get("date") or {}
+        dp = (props.get(DATE_PROP, {}) or {}).get("date") or {}
         df = date.fromisoformat(dp["start"][:10]) if dp.get("start") else None
-        # 날짜 필드로 미래일 지정 가능(미리 계획), 백데이팅은 차단, stub은 날짜 그대로
+        # 목표일로 미래일 지정 가능(미리 계획), 백데이팅은 차단, stub은 목표일 그대로
         cday = core.resolve_cday(created, df, is_stub)
         return cls(
             page_id=page["id"],
@@ -49,6 +50,7 @@ class Card:
             is_stub=is_stub,
             items=core.task_items(blocks),
             photo_urls=photo_urls,
+            date_field=df,
         )
 
 

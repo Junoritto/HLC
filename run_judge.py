@@ -29,9 +29,9 @@ def main() -> None:
         if (member_id, today) not in existing_stub:
             client.create_stub(member_id, today)
 
-    # 3) 날짜 자동 기입 (focus 실카드)
+    # 3) 목표일 자동 기입 — 비어 있을 때만 (사용자가 찍은 목표일은 절대 덮어쓰지 않음)
     for c in cards:
-        if not c.is_stub and c.cday in focus:
+        if not c.is_stub and c.cday in focus and c.date_field is None:
             client.set_date(c.page_id, c.cday)
 
     # 4) 리포트 발송 (임베드 + 사진 + 정산 현황 + ⏳면 봇이 ✅ 미리 달기)

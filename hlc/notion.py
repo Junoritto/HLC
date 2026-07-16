@@ -7,7 +7,7 @@ from datetime import date, datetime
 import requests
 
 from . import core
-from .config import DATABASE_ID, STATUS_FAIL, STATUS_PROP
+from .config import DATABASE_ID, DATE_PROP, STATUS_FAIL, STATUS_PROP
 from .models import Card
 
 API = "https://api.notion.com/v1"
@@ -70,7 +70,7 @@ class Notion:
 
     def set_date(self, page_id: str, day: date) -> None:
         self._patch(f"/pages/{page_id}",
-                    {"properties": {"날짜": {"date": {"start": day.isoformat()}}}})
+                    {"properties": {DATE_PROP: {"date": {"start": day.isoformat()}}}})
 
     def create_stub(self, assignee_id: str, day: date) -> None:
         title = f"[HLC] 미제출 ({day.month}/{day.day})"
@@ -80,7 +80,7 @@ class Notion:
                 "이름": {"title": [{"text": {"content": title}}]},
                 "담당자": {"people": [{"id": assignee_id}]},
                 STATUS_PROP: {"status": {"name": STATUS_FAIL}},
-                "날짜": {"date": {"start": day.isoformat()}},
+                DATE_PROP: {"date": {"start": day.isoformat()}},
             },
         })
 
